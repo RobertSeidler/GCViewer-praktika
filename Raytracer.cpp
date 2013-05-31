@@ -400,7 +400,7 @@ int Raytracer::gibtsSchnittpunkt(Vector start, Vector dir, Triangle tri, float t
                             + (crossProduct(p, tri.vertices[2]) + crossProduct(tri.vertices[2], tri.vertices[0]) + crossProduct(tri.vertices[0], p)).norm() /2;
     float abweichung = gesamtFlaeche * 0.05;
 
-    if(gesamtTeilFlaeche > (gesamtFlaeche+abweichung))
+    if(gesamtTeilFlaeche <= (gesamtFlaeche+abweichung))
     {
         return 1;
     }
