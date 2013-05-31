@@ -357,54 +357,73 @@ void Raytracer::genImage()
 
 QColor Raytracer::raytrace(Vector start, Vector dir, int depth)
 {
-    Triangle tempTriangle();
-    float kleinstesT;
+	// t ist der Parameter der Geradengleichung für unseren Strahl. Er sagt uns, wie weit das geschnittene Dreieck vom "Auge" entfernt ist.
     float t = -1;
+
+	// speichert immer nur den kleinsten Parameter t der Geraden Gleichung, der das dem Auge am nächsten befindliche Dreieck beschreibt, alle größeren Dreiecke für ein t, werden vom nähsten verdeckt.
+    float kleinstesT;
     QColor aktuelleFarbe;
+	
+	// Variable soll Wert 1 haben, falls der Strahl schon einmal ein Dreieck geschnitten hat. 0 sonst 
     int hatsSchonmalGeschnitten = 0;
+	
+	// Durchlaufe alle Dreiecke der Szene
     for(int i = 0; i < triangles.size(); i+=1)
     {
+		// Berechne Parameter t der Geraden, für dieses Dreieck, setze t negativ
         if((scalarProduct(dir, triangles.at(i).normals[0])) != 0)
             t = (scalarProduct((triangles.at(i).vertices[0] - start), triangles.at(i).normals[0])) / scalarProduct(dir, triangles.at(i).normals[0]);
         else t = -1;
 
-
+		// teste, ob ein Schnittpunkt mit dem Strahl und dem aktuellen Dreieck besteht
         if((gibtsSchnittpunkt(start, dir, triangles.at(i), t)) == 1)
         {
-
+			// Hat der Strahl bisher noch kein Dreieck geschnitten, ist dies der erste erfolgreiche Schnitt, also ist dies das kleinste t.
             if(hatsSchonmalGeschnitten == 0)
-            {
+            {				
                 hatsSchonmalGeschnitten = 1;
                 kleinstesT = t;
+				// TODO gib eine sinnvolle Farbe zurück.
                 aktuelleFarbe = QColor(254,0,0);
             }
+			// sonst bestimme kleinstes t, durch vergleich
             else
             {
+				// TODO gib eine sinnvolle Farbe zurück.
                 if(kleinstesT > t) aktuelleFarbe = QColor(254,0,0);
             }
         }
     }
-
+	
+	// gib hintergrundfarbe zurück, wenn kein Dreieck geschnitten wurde
     if(hatsSchonmalGeschnitten == 0) return backgroundColor;
+	// sonst die bestimmte farbe
     else return aktuelleFarbe;
 }
 
 int Raytracer::gibtsSchnittpunkt(Vector start, Vector dir, Triangle tri, float t)
 {
+	// wenn t negativ, liegt das dreieck hinter dem "Auge", also kann falsch zurück gegeben werden
     if(t < 0) return 0;
+	// berechne den Punkt, in dem der Strahl, die Ebene des Dreiecks scheidet.
     Vector p = start + crossProduct(Vector(t,t,t,1), dir);
 
+	// Berechne die gesamtfläche, des eigentlichen dreiecks.
     float gesamtFlaeche = (crossProduct(tri.vertices[0], tri.vertices[1]) + crossProduct(tri.vertices[1], tri.vertices[2]) + crossProduct(tri.vertices[2], tri.vertices[0]) ).norm() /2;
-    float gesamtTeilFlaeche = (crossProduct(tri.vertices[0], p) + crossProduct(p, tri.vertices[1]) + crossProduct(tri.vertices[1], tri.vertices[0])).norm() /2
+    // Berechne die Flaechen die erzeugt werden, mit je 2 Punkten, des eigentlichen dreiecks und dem schnittpunkt mit der ebene.
+	float gesamtTeilFlaeche = (crossProduct(tri.vertices[0], p) + crossProduct(p, tri.vertices[1]) + crossProduct(tri.vertices[1], tri.vertices[0])).norm() /2
                             + (crossProduct(p, tri.vertices[1]) + crossProduct(tri.vertices[1], tri.vertices[2]) + crossProduct(tri.vertices[2], p)).norm() /2
                             + (crossProduct(p, tri.vertices[2]) + crossProduct(tri.vertices[2], tri.vertices[0]) + crossProduct(tri.vertices[0], p)).norm() /2;
-    float abweichung = gesamtFlaeche * 0.05;
+    // Beim Rechnen mit floats können rechen ungenauigkeiten entstehen, wir gehen hier einfach mal von 5% aus
+	float abweichung = gesamtFlaeche * 0.05;
 
+	// wenn der Punkt ausserhalb des Dreiecks liegt, ist die Fläche der Teildreicke grösser als die Fläche des eigentlichen Dreiecks, sonst nicht.
     if(gesamtTeilFlaeche <= (gesamtFlaeche+abweichung))
     {
+		// 1 soll bedeuten, dass der Strahl das Dreieck schneidet.
         return 1;
     }
-
+	// null soll bedeuten, dass der Strahl das Dreieck nicht schneidet.
     return 0;
 }
 
