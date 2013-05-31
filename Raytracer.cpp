@@ -370,7 +370,7 @@ QColor Raytracer::raytrace(Vector start, Vector dir, int depth)
     // Durchlaufe alle Dreiecke der Szene
     for(int i = 0; i < triangles.size(); i+=1)
     {
-        // Berechne Parameter t der Geraden, für dieses Dreieck, setze t negativ
+        // Berechne Parameter t der Geraden, für dieses Dreieck, setze t negativ, wenn b*n = 0.
         if((scalarProduct(dir, triangles.at(i).planeNormal)) != 0)
             t = (scalarProduct((triangles.at(i).vertices[0] - start), triangles.at(i).planeNormal)) / scalarProduct(dir, triangles.at(i).planeNormal);
         else t = -1;
@@ -406,19 +406,20 @@ int Raytracer::gibtsSchnittpunkt(Vector start, Vector dir, Triangle tri, float t
     // wenn t negativ, liegt das dreieck hinter dem "Auge", also kann falsch zurück gegeben werden
     if(t < 0) return 0;
     // berechne den Punkt, in dem der Strahl, die Ebene des Dreiecks scheidet.
-    Vector p = start + crossProduct(Vector(t,t,t,1), dir);
+    Vector p; //= start + crossProduct(Vector(t,t,t,1), dir);
 
-    // Berechne die gesamtfläche, des eigentlichen dreiecks.
-    float gesamtFlaeche = (crossProduct(tri.vertices[0], tri.vertices[1]) + crossProduct(tri.vertices[1], tri.vertices[2]) + crossProduct(tri.vertices[2], tri.vertices[0]) ).norm() /2;
-        // Berechne die Flaechen die erzeugt werden, mit je 2 Punkten, des eigentlichen dreiecks und dem schnittpunkt mit der ebene.
-	float gesamtTeilFlaeche = (crossProduct(tri.vertices[0], p) + crossProduct(p, tri.vertices[1]) + crossProduct(tri.vertices[1], tri.vertices[0])).norm() /2
-                            + (crossProduct(p, tri.vertices[1]) + crossProduct(tri.vertices[1], tri.vertices[2]) + crossProduct(tri.vertices[2], p)).norm() /2
-                            + (crossProduct(p, tri.vertices[2]) + crossProduct(tri.vertices[2], tri.vertices[0]) + crossProduct(tri.vertices[0], p)).norm() /2;
-        // Beim Rechnen mit floats können rechen ungenauigkeiten entstehen, wir gehen hier einfach mal von 5% aus
-	float abweichung = gesamtFlaeche * 0.05;
+    p.setValue(0, start.getValues()[0] + t*dir.getValues()[0]);
+    p.setValue(1, start.getValues()[1] + t*dir.getValues()[1]);
+    p.setValue(2, start.getValues()[2] + t*dir.getValues()[2]);
+    p.setValue(3, start.getValues()[3] + t*dir.getValues()[3]);
 
-    // wenn der Punkt ausserhalb des Dreiecks liegt, ist die Fläche der Teildreicke grösser als die Fläche des eigentlichen Dreiecks, sonst nicht.
-    if(gesamtTeilFlaeche <= (gesamtFlaeche+abweichung))
+    float areaTri = 0.5 * (crossProduct((tri.vertices[1] - tri.vertices[0]),(tri.vertices[3] - tri.vertices[0]))).norm();
+    float alpha1 = (0.5 * (crossProduct((tri.vertices[1] - p),tri.vertices[2] - p)).norm()) / areaTri;
+    float alpha2 = (0.5 * (crossProduct((tri.vertices[2] - p),tri.vertices[0] - p)).norm()) / areaTri;
+    float alpha3 = (0.5 * (crossProduct((tri.vertices[0] - p),tri.vertices[1] - p)).norm()) / areaTri;
+
+    // wenn der Punkt ausserhalb des Dreiecks liegt.
+    if(alpha1 >= 0 && alpha2 >= 0 && alpha3 >= 0)
     {
         // 1 soll bedeuten, dass der Strahl das Dreieck schneidet.
         return 1;
