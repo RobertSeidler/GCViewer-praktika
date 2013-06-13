@@ -461,9 +461,35 @@ int Raytracer::liesIn(Triangle tri, Vector minCoords, Vector maxCoords)
 
 int Raytracer::IsInterceptionPoint(Vector *voxelSquare, Vector *line)
 {
+    Vector dir = line[1] - line[0];
+    Vector normal = crossProduct((voxelSquare[1] - voxelSquare[0]),(voxelSquare[2] - voxelSquare[0]));
+    int t;
+    if(scalarProduct(dir, normal) != 0){
+        t = scalarProduct((voxelSquare[0] - line[0]), normal)/ scalarProduct(dir, normal);
+    }
+    else{
+        return 0;
+    }
+    Vector tempVector;
+    for(int i = 0; i < 4; i++){
+        tempVector.setValue(i, dir[i] * t);
+    }
+    Vector interceptionPoint = line[0] + tempVector;
 
+    for(int i = 0; i < 4; i++){
+        for(int f = 0; f < 4; f++){
+            if(voxelSquare[f%4][i] < voxelSquare[(f+1)%4][i]){
+                if(interceptionPoint[i] < voxelSquare[f%4][i]) return 0;
+                if(interceptionPoint[i] > voxelSquare[(f+1)%4][i]) return 0;
+            }
+            if(voxelSquare[f%4][i] > voxelSquare[(f+1)%4][i]){
+                if(interceptionPoint[i] > voxelSquare[f%4][i]) return 0;
+                if(interceptionPoint[i] < voxelSquare[(f+1)%4][i]) return 0;
+            }
+        }
+    }
 
-    return 0;
+    return 1;
 }
 
 void Raytracer::keyPressEvent(QKeyEvent *event)

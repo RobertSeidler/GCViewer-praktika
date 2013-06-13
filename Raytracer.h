@@ -33,7 +33,9 @@ class Raytracer : public QGLWidget
 			QImage finalImage;
 			std::vector<Triangle> triangles;
 			void participate();
-			
+            int liesIn(Triangle tri, Vector minCoords, Vector maxCoords);
+            int IsInterceptionPoint(Vector *voxelSquare, Vector *line);
+
             //Scene setup
 			Vector camera, center, upVector;
 			float focalLength;
