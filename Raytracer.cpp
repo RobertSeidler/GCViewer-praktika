@@ -439,17 +439,11 @@ int Raytracer::liesIn(Triangle tri, Vector minCoords, Vector maxCoords)
     int edgeIsIn = 1;
 
     for(int i = 0; i < 3; i++){
-        for(int k = 0; k < 3; i++){
-            if(minCoords[k] > tri.vertices[i][k]){
-                verticeIsIn = 0;
-                break;
-            }
-            if(maxCoords[k] < tri.vertices[i][k]){
-                verticeIsIn = 0;
-                break;
+        for(int k = 0; k < 3; k++){
+            if(minCoords[k] >= tri.vertices[i][k] && maxCoords[k] <= tri.vertices[i][k]){
+                return 1;
             }
         }
-        if(vericeIsIn == 0) break;
     }
 
     if(verticeIsIn == 0){
