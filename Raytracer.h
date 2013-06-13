@@ -26,14 +26,14 @@ class Raytracer : public QGLWidget
 			void keyPressEvent(QKeyEvent *event);
 
 		private:
-			//void calcDimensions();
 			void init();
 			bool initShaders();
 			QColor raytrace(Vector r, Vector e, int depth);
 			QImage *image;
 			QImage finalImage;
 			std::vector<Triangle> triangles;
-
+			void participate();
+			
             //Scene setup
 			Vector camera, center, upVector;
 			float focalLength;

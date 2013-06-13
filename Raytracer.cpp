@@ -401,6 +401,38 @@ QColor Raytracer::raytrace(Vector start, Vector dir, int depth)
 	return QColor(color, color, color);
 }
 
+void Raytracer::participate()
+{
+    Vector minCoords;
+    Vector maxCoords;
+	int firstStep = 1;
+	
+	// bestimme die Boundary Box:
+	// i ist index vom aktuellen dreieck
+	for(int i = 0; i < triangles.size(); i++){
+		Triangle tri = triangles[i];
+		// f ist der index des ecktpunktes des aktuellen dreiecks
+        for(int f = 0; f < 3; f++){
+			// die aktuelle koordinate
+            for(int k = 0; k < 4; k++){
+				
+				if(firstStep == 1){
+					minCoords = tri.vertices[f];
+					maxCoords = tri.vertices[f];
+				}
+				else{
+					if(minCoords[k] > tri.vertices[f][k]) minCoords[k] = tri.vertices[f][k];
+					if(maxCoords[k] > tri.vertices[f][k]) maxCoords[k] = tri.vertices[f][k];
+				}
+			}
+			firstStep = 0;
+		}
+	}
+	
+	
+	
+}
+
 void Raytracer::keyPressEvent(QKeyEvent *event)
 {
 	if (event->key() == Qt::Key_S)
