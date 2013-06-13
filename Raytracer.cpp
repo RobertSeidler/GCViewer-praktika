@@ -187,7 +187,7 @@ void Raytracer::init()
 	//create DisplayList
 	displayList = glGenLists(1);
 	glNewList(displayList, GL_COMPILE);
-	for (int i=0; i<triangles.size(); ++i)
+	for (int i=0; i < triangles.size(); ++i)
 	{
 		float r = (float)(i % 255);
 		float g = (float)((i/255) % 255);
@@ -241,7 +241,7 @@ void Raytracer::init()
 		idx[i/4] = (int)renderedImage[i] + (int)(renderedImage[i+1])*255 + (int)(renderedImage[i+2])*255*255 + (int)(renderedImage[i+3])*255*255*255;
 
 	delete renderedImage;
-
+	//calcDimensions();
 }
 
 void Raytracer::resizeGL(int w, int h)
@@ -285,6 +285,7 @@ void Raytracer::genImage()
 
 	unsigned int backgroundCode = backgroundColor.red() + backgroundColor.green()*255 + backgroundColor.blue()*255*255 + (unsigned int)((unsigned int)255*(unsigned int)255*(unsigned int)255*(unsigned int)255); //the alpha value of background is always set  to 1.0 (255)
 	cout<<"Back_Code: "<<backgroundCode<<endl;
+
 	glBindFramebufferEXT(GL_FRAMEBUFFER_EXT,fboId);	
 	paintGL();
 	GLdouble mvMatrix[16];
@@ -303,9 +304,8 @@ void Raytracer::genImage()
 	w->resize(label->size());
 	w->setWindowTitle(QString("Rendered image"));
 	w->show();
-	
 
-#pragma omp parallel for schedule(dynamic, 1)
+//#pragma omp parallel for schedule(dynamic, 1)
   for (int j=0; j<image->height(); j+=1)
 	{	
 		for (int i=0; i<image->width(); i+=1)
@@ -328,13 +328,13 @@ void Raytracer::genImage()
 
 		}
 
-		#pragma omp critical
+		//#pragma omp critical
 		{
 			++count;
 			cout<<"\r----"<<(float)count/(float)image->height()*100.0<<"----";
 		}
 		
-		#pragma omp master
+		//#pragma omp master
 		{
 			if (!(superSamplingRate <= 1.0) || omp_get_num_threads()==1)
 			{
@@ -354,79 +354,127 @@ void Raytracer::genImage()
     updateGL();
 }
 
-
 QColor Raytracer::raytrace(Vector start, Vector dir, int depth)
 {
-	// t ist der Parameter der Geradengleichung für unseren Strahl. Er sagt uns, wie weit das geschnittene Dreieck vom "Auge" entfernt ist.
-    float t = -1;
+	float t = 0;
+	float t_min = -1;
+	float index;
+	
+	for (int i = 0; i < lights.size(); ++i)
+	{
+		for (int j = 0; j < triangles.size(); ++j)
+		{
+			Triangle tri = triangles[j];
+			tri.planeNormal = crossProduct(tri.vertices[1] - tri.vertices[0], tri.vertices[2] - tri.vertices[0]);
+			float notParallel = scalarProduct(dir, tri.planeNormal);
+			if (notParallel == 0)
+				continue;
+			t = scalarProduct((tri.vertices[0] - start), tri.planeNormal) / notParallel;
+			if (t > 0 && (t < t_min || t_min == -1))
+			{					
+				float bary[3];
+				int broken = 0;
 
-	// speichert immer nur den kleinsten Parameter t der Geraden Gleichung, der das dem Auge am nächsten befindliche Dreieck beschreibt, alle größeren Dreiecke für ein t, werden vom nähsten verdeckt.
-    float kleinstesT;
-    QColor aktuelleFarbe;
+				Vector ray = start+dir*t;
+				for ( int k = 0; k < 3; k++)
+				{
+					bary[k] = scalarProduct(crossProduct(tri.vertices[(k+1)%3] - ray, tri.vertices[(k+2)%3] - ray), tri.planeNormal);
+					if (bary[k] < 0) 
+					{
+						broken = 1;
+						break;
+					}
+				}
+				
+				if (broken == 1) continue;
+				
+				t_min = t;
+				index = j;
+			}
+		}
+	}
 	
-	// Variable soll Wert 1 haben, falls der Strahl schon einmal ein Dreieck geschnitten hat. 0 sonst 
-    int hatsSchonmalGeschnitten = 0;
-	
-	// Durchlaufe alle Dreiecke der Szene
-    for(int i = 0; i < triangles.size(); i+=1)
-    {
-		// Berechne Parameter t der Geraden, für dieses Dreieck, setze t negativ
-        if((scalarProduct(dir, triangles.at(i).normals[0])) != 0)
-            t = (scalarProduct((triangles.at(i).vertices[0] - start), triangles.at(i).normals[0])) / scalarProduct(dir, triangles.at(i).normals[0]);
-        else t = -1;
+	if (t_min == -1)
+		return backgroundColor;
 
-		// teste, ob ein Schnittpunkt mit dem Strahl und dem aktuellen Dreieck besteht
-        if((gibtsSchnittpunkt(start, dir, triangles.at(i), t)) == 1)
-        {
-			// Hat der Strahl bisher noch kein Dreieck geschnitten, ist dies der erste erfolgreiche Schnitt, also ist dies das kleinste t.
-            if(hatsSchonmalGeschnitten == 0)
-            {				
-                hatsSchonmalGeschnitten = 1;
-                kleinstesT = t;
-				// TODO gib eine sinnvolle Farbe zurück.
-                aktuelleFarbe = QColor(254,0,0);
-            }
-			// sonst bestimme kleinstes t, durch vergleich
-            else
-            {
-				// TODO gib eine sinnvolle Farbe zurück.
-                if(kleinstesT > t) aktuelleFarbe = QColor(254,0,0);
-            }
-        }
-    }
-	
-	// gib hintergrundfarbe zurück, wenn kein Dreieck geschnitten wurde
-    if(hatsSchonmalGeschnitten == 0) return backgroundColor;
-	// sonst die bestimmte farbe
-    else return aktuelleFarbe;
+	int color = (index/triangles.size())*255;
+	return QColor(color, color, color);
 }
 
-int Raytracer::gibtsSchnittpunkt(Vector start, Vector dir, Triangle tri, float t)
+/*void Raytracer::calcDimensions()
 {
-	// wenn t negativ, liegt das dreieck hinter dem "Auge", also kann falsch zurück gegeben werden
-    if(t < 0) return 0;
-	// berechne den Punkt, in dem der Strahl, die Ebene des Dreiecks scheidet.
-    Vector p = start + crossProduct(Vector(t,t,t,1), dir);
+	for (int i = 0; i < triangles.size(); ++i)
+	{
+		Triangle tri = triangles[i];
+		for (int j = 0; j < 3; ++j)
+		{
+			if (tri.vertices[j][0] > maxDimension[0])
+				maxDimension[0] = tri.vertices[j][0];
+			if (tri.vertices[j][1] > maxDimension[1])
+				maxDimension[1] = tri.vertices[j][1];
+			if (tri.vertices[j][2] > maxDimension[2])
+				maxDimension[2] = tri.vertices[j][2];
+			if (tri.vertices[j][0] < minDimension[0])
+				minDimension[0] = tri.vertices[j][0];
+			if (tri.vertices[j][1] < minDimension[1])
+				minDimension[1] = tri.vertices[j][1];
+			if (tri.vertices[j][2] < minDimension[2])
+				minDimension[2] = tri.vertices[j][2];
+		}
+	}
+	
+	int x = std::abs((int)minDimension[0])+maxDimension[0]+2;
+	int y = std::abs((int)minDimension[1])+maxDimension[1]+2;
+	int z = std::abs((int)minDimension[2])+maxDimension[2]+2;
 
-	// Berechne die gesamtfläche, des eigentlichen dreiecks.
-    float gesamtFlaeche = (crossProduct(tri.vertices[0], tri.vertices[1]) + crossProduct(tri.vertices[1], tri.vertices[2]) + crossProduct(tri.vertices[2], tri.vertices[0]) ).norm() /2;
-    // Berechne die Flaechen die erzeugt werden, mit je 2 Punkten, des eigentlichen dreiecks und dem schnittpunkt mit der ebene.
-	float gesamtTeilFlaeche = (crossProduct(tri.vertices[0], p) + crossProduct(p, tri.vertices[1]) + crossProduct(tri.vertices[1], tri.vertices[0])).norm() /2
-                            + (crossProduct(p, tri.vertices[1]) + crossProduct(tri.vertices[1], tri.vertices[2]) + crossProduct(tri.vertices[2], p)).norm() /2
-                            + (crossProduct(p, tri.vertices[2]) + crossProduct(tri.vertices[2], tri.vertices[0]) + crossProduct(tri.vertices[0], p)).norm() /2;
-    // Beim Rechnen mit floats können rechen ungenauigkeiten entstehen, wir gehen hier einfach mal von 5% aus
-	float abweichung = gesamtFlaeche * 0.05;
-
-	// wenn der Punkt ausserhalb des Dreiecks liegt, ist die Fläche der Teildreicke grösser als die Fläche des eigentlichen Dreiecks, sonst nicht.
-    if(gesamtTeilFlaeche <= (gesamtFlaeche+abweichung))
-    {
-		// 1 soll bedeuten, dass der Strahl das Dreieck schneidet.
-        return 1;
-    }
-	// null soll bedeuten, dass der Strahl das Dreieck nicht schneidet.
-    return 0;
-}
-
+	std::vector<Triangle> voxel[x][y][z];
+	int broken=0;
+	for (int i = 0; i < triangles.size(); ++i)
+	{
+		Triangle tri = triangles[i];
+		for (int j = 0; j < 3; ++j)
+		{
+			if (tri.vertices[j][0] >= 0)
+				x = tri.vertices[j][0]-(int)minDimension[0]+1;
+			else
+				x = std::abs((int)tri.vertices[j][0]);
+				
+			if (tri.vertices[j][1] >= 0)
+				y = tri.vertices[j][1]-(int)minDimension[1]+1;
+			else
+				y = std::abs((int)tri.vertices[j][1]);
+				
+			if (tri.vertices[j][2] >= 0)
+				z = tri.vertices[j][2]-(int)minDimension[2]+1;
+			else
+				z = std::abs((int)tri.vertices[j][2]);
+				
+			if (voxel[x][y][z].empty())
+				voxel[x][y][z].push_back(tri);
+			else
+			{
+				int is_in = 0;
+				for (int k = 0; k < voxel[x][y][z].size(); ++k)
+				{
+					int equal = 0;
+					for (int l = 0; l < 3; ++l)
+					{
+						if (voxel[x][y][z][k].vertices[l][0] == tri[j][0] && voxel[x][y][z][k].vertices[l][1] == tri[j][1] && voxel[x][y][z][k].vertices[l][2] == tri[j][2])
+							equal++;
+					}
+					if (equal == 3)
+					{
+						is_in++;
+						break;
+					}
+				}
+				
+				if (is_in == 0)
+					voxel[x][y][z].push_back(tri);
+			}
+		}
+	}
+}*/
 
 void Raytracer::keyPressEvent(QKeyEvent *event)
 {

@@ -8,7 +8,7 @@
 #include <vector>
 
 #include "CGMath.h"
-
+#include <iostream>
 #define MAX_DEPTH 4
 
 class Raytracer : public QGLWidget
@@ -26,10 +26,10 @@ class Raytracer : public QGLWidget
 			void keyPressEvent(QKeyEvent *event);
 
 		private:
+			//void calcDimensions();
 			void init();
 			bool initShaders();
-                        int gibtsSchnittpunkt(Vector start, Vector dir, Triangle tri, float t);
-                        QColor raytrace(Vector r, Vector e, int depth);
+			QColor raytrace(Vector r, Vector e, int depth);
 			QImage *image;
 			QImage finalImage;
 			std::vector<Triangle> triangles;
