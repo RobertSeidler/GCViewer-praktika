@@ -414,7 +414,7 @@ void Raytracer::participate()
 		// f ist der index des ecktpunktes des aktuellen dreiecks
         for(int f = 0; f < 3; f++){
 			// die aktuelle koordinate
-            for(int k = 0; k < 4; k++){
+            for(int k = 0; k < 3; k++){
 				
 				if(firstStep == 1){
 					minCoords = tri.vertices[f];
@@ -422,7 +422,7 @@ void Raytracer::participate()
 				}
 				else{
 					if(minCoords[k] > tri.vertices[f][k]) minCoords[k] = tri.vertices[f][k];
-					if(maxCoords[k] > tri.vertices[f][k]) maxCoords[k] = tri.vertices[f][k];
+                    if(maxCoords[k] < tri.vertices[f][k]) maxCoords[k] = tri.vertices[f][k];
 				}
 			}
 			firstStep = 0;
@@ -431,6 +431,39 @@ void Raytracer::participate()
 	
 	
 	
+}
+
+int Raytracer::liesIn(Triangle tri, Vector minCoords, Vector maxCoords)
+{
+    int verticeIsIn = 1;
+    int edgeIsIn = 1;
+
+    for(int i = 0; i < 3; i++){
+        for(int k = 0; k < 3; i++){
+            if(minCoords[k] > tri.vertices[i][k]){
+                verticeIsIn = 0;
+                break;
+            }
+            if(maxCoords[k] < tri.vertices[i][k]){
+                verticeIsIn = 0;
+                break;
+            }
+        }
+        if(vericeIsIn == 0) break;
+    }
+
+    if(verticeIsIn == 0){
+
+    }
+
+    return 0;
+}
+
+int Raytracer::IsInterceptionPoint(Vector *voxelSquare, Vector *line)
+{
+
+
+    return 0;
 }
 
 void Raytracer::keyPressEvent(QKeyEvent *event)
