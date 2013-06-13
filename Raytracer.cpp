@@ -459,12 +459,18 @@ int Raytracer::liesIn(Triangle tri, Vector minCoords, Vector maxCoords)
     return 0;
 }
 
+// prüft, ob ein schnittpunkt zwischen geraden und voxel Seite besteht. voxelSquare soll ein array mit den 4 eckpunkten sein. line soll ein array mit den beiden punkten der Geraden sein.
 int Raytracer::IsInterceptionPoint(Vector *voxelSquare, Vector *line)
 {
+    // richtungsvektor der Geraden, aus den beiden line Vektoren.
     Vector dir = line[1] - line[0];
+
+    // berechnet die normale der voxel Seite
     Vector normal = crossProduct((voxelSquare[1] - voxelSquare[0]),(voxelSquare[2] - voxelSquare[0]));
     int t;
+    // wenn Fläsche der voxel seite und gerade der linie paralel, dann schneiden sie nicht in einem Punkt.
     if(scalarProduct(dir, normal) != 0){
+        // berechne den Parameter t der geraden gleichung
         t = scalarProduct((voxelSquare[0] - line[0]), normal)/ scalarProduct(dir, normal);
     }
     else{
@@ -474,8 +480,10 @@ int Raytracer::IsInterceptionPoint(Vector *voxelSquare, Vector *line)
     for(int i = 0; i < 4; i++){
         tempVector.setValue(i, dir[i] * t);
     }
+    // berechne aus geraden Gleichung den Schnitt punkt, von geraden und ebene
     Vector interceptionPoint = line[0] + tempVector;
 
+    // schau ob der schnittpunkt inerhalb des rechtecks liegt
     for(int i = 0; i < 4; i++){
         for(int f = 0; f < 4; f++){
             if(voxelSquare[f%4][i] < voxelSquare[(f+1)%4][i]){
@@ -488,7 +496,10 @@ int Raytracer::IsInterceptionPoint(Vector *voxelSquare, Vector *line)
             }
         }
     }
+    // schau ob der schnittpunkt überhaupt auf der geraden liegt
+    if((line[0] - line[1]).norm() < ((line[0] - interceptionPoint).norm() + (line[1] - interceptionPoint).norm())) return 0;
 
+    // wenn keiner der tests negativ war, müssen sie wohl geschnitten haben
     return 1;
 }
 
